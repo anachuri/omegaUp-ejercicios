@@ -4,36 +4,64 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-int get_resonance_groups(char* cadena,int n,int l,int r){
-    int calida=0,solitario=0,baja_constante=0;
-    int groups=0;
-    for(int i=l+1;i<r-1;i++){
-        if(cadena[i] == cadena[i+1] == cadena[l+2])
-          groups++;
-        else if(cadena[
+typedef struct {
+    int n;
+    char *tree;
+} SegmentTree;
+
+
+SegmentTree* crear_segment_tree(char* arr, int n) {
+    SegmentTree* st = (SegmentTree*)malloc(sizeof(SegmentTree));
+    st->n = n;
+    st->tree = (char*)malloc(sizeof(char) * 2 * n);
+
+    // 1. Copiar elementos originales a las hojas [n ... 2n - 1]
+    for (int i = 0; i < n; i++) {
+        st->tree[n + i] = arr[i];
     }
+
+    // 2. Calcular nodos interiores [n-1 ... 1]
+    for (int i = n - 1; i > 0; i--) {
+        st->tree[i] = st->tree[i << 1] + st->tree[i << 1 | 1];
+    }
+
+    return st;
+}
+
+// Consulta de Rango [l, r] inclusive O(log N)
+int consultar(SegmentTree *st, int l, int r) {
+    int res = 0;
+    // Mover a los índices de las hojas
+    l += st->n;
+    r += st->n + 1; // Convertir a intervalo semiabierto [l, r)
+
+    while (l < r) {
+        // Si l es un hijo derecho, su valor debe incluirse solo,
+        // luego se pasa al siguiente nodo
+        if (l & 1) {
+            res += st->tree[l++];
+        }
+        // Si r es un hijo derecho (en rango abierto), 
+        // el elemento anterior debe incluirse
+        if (r & 1) {
+            res += st->tree[--r];
+        }
+        // Subir un nivel en el árbol
+        l >>= 1;
+        r >>= 1;
+    }
+    return res;
 }
 
 int main(int argc, char *argv[]) {
   int n,q;
-  scanf("%d %d", &n, &q);
   char cadena[n];
+  scanf("%d %d", &n, &q);
   //printf("%d y %d\n", n,q);
   scanf(" %s",cadena);
   //printf("%s\n",cadena);
- int type,l,r,p,c;
-for(int i=0;i<q;i++){
-   scanf("%d", &type);
-   if(type==1){
-       scanf("%d %d",l,r);
-       if(l<0 || n>=r)
-        return;
-        printf("%d",get_resonace_groups(cadena,n,l,r)
-       return;
-   }
-   scanf("%d %c",p,c);
-   
- }
+  SegmentTree *st = crear_segment_tree(cadena, n);
+  printf("%d\n", consultar(st, 0, 2));  
 
   return 0;
 }
