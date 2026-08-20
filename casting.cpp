@@ -70,7 +70,6 @@ int main(){
     int n,k;
     cin>>n>>k;
     vector<tparticipant> participants(n);
-    vector<tparticipant> winners;
 
     for(int i=0;i<n;i++)
       cin>>participants[i].rating;
@@ -80,12 +79,14 @@ int main(){
         cin>>p;
         participants[i].probability = p /1000;
     }
-
     sort(participants.begin(), participants.end(), [](const tparticipant& a, const tparticipant& b) {
         return a.rating > b.rating;
     });
 
-
-
+    int sum = 0;
+    for(int i=0;i<k;i++)
+      sum+=participants.at(i).rating;
+    
+    
   return 0;
 }
