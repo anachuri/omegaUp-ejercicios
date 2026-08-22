@@ -1,0 +1,582 @@
+=====================================================================
+ ALGORITMOS DE PROGRAMACION COMPETITIVA EN C++ (omegaup y similares)
+ Uso practico con la STL (<algorithm>, <numeric>, <queue>, etc.)
+=====================================================================
+
+Nota general: <algorithm> no trae Dijkstra, DSU, segment tree, etc.
+"hechos". Pero SI trae piezas clave (sort, binary_search, next_permutation,
+accumulate, gcd) que se combinan con contenedores de la STL (priority_queue,
+vector, set) para implementar estos algoritmos de forma corta y segura.
+A continuacion se marca en cada seccion que es "STL directa" y que hay
+que programar a mano (con STL como soporte).
+
+#include <bits/stdc++.h> suele usarse en competencia para traer todo
+de una (algorithm, vector, queue, numeric, etc. de un solo golpe).
+
+---------------------------------------------------------------------
+1) BUSQUEDA BINARIA
+---------------------------------------------------------------------
+
+1.a) binary_search, lower_bound, upper_bound (STL directa, <algorithm>)
+    Requieren el rango ORDENADO.
+
+    vector<int> v = {1, 3, 3, 5, 7, 9};
+
+    bool existe = binary_search(v.begin(), v.end(), 5); // true
+
+    auto it1 = lower_bound(v.begin(), v.end(), 3);
+    // it1 apunta al primer elemento >= 3
+
+    auto it2 = upper_bound(v.begin(), v.end(), 3);
+    // it2 apunta al primer elemento > 3
+
+    int cantidad_de_3 = it2 - it1; // cuenta ocurrencias de 3
+
+    Casos de uso en omegaup:
+    - Saber si un valor existe en un arreglo ordenado.
+    - Contar ocurrencias / encontrar rangos de un valor.
+    - Encontrar la posicion de insercion manteniendo el orden.
+
+1.b) Busqueda binaria sobre la respuesta (manual, NO esta en <algorithm>)
+    Se usa cuando la respuesta es un numero y la condicion "es valida"
+    es monotona (si X sirve, todo lo mayor/menor que X tambien sirve).
+
+    bool esValido(int x) {
+        // logica del problema: true si x cumple la condicion
+        return true; // placeholder
+    }
+
+    int busquedaBinariaRespuesta(int lo, int hi) {
+        while (lo < hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (esValido(mid)) hi = mid;      // buscamos el menor que sirve
+            else lo = mid + 1;
+        }
+        return lo;
+    }
+
+    Casos de uso:
+    - "Minimizar el maximo" / "maximizar el minimo" (ej: repartir cargas,
+      velocidad minima para terminar a tiempo, distancia minima entre
+      vacas, etc.)
+    - Problemas de optimizacion donde probar un valor es facil (O(n) o
+      similar) pero recorrer todas las respuestas posibles es demasiado
+      lento.
+
+---------------------------------------------------------------------
+2) TWO POINTERS Y SLIDING WINDOW (manual, se apoyan en <algorithm>)
+---------------------------------------------------------------------
+
+2.a) Two pointers (dos indices que avanzan segun condicion)
+
+    // Ejemplo: contar pares con suma exacta en arreglo ORDENADO
+    sort(v.begin(), v.end()); // sort() de <algorithm>
+    int i = 0, j = v.size() - 1, objetivo = 10, cuenta = 0;
+    while (i < j) {
+        int suma = v[i] + v[j];
+        if (suma == objetivo) { cuenta++; i++; j--; }
+        else if (suma < objetivo) i++;
+        else j--;
+    }
+
+    Casos de uso: pares con suma dada, particionar arreglos, problemas
+    de "dos punteros que se acercan" en arreglos ordenados.
+
+2.b) Sliding window (ventana que crece/achica)
+
+    // Subarreglo mas largo con suma <= objetivo
+    int izq = 0, sumaActual = 0, mejor = 0;
+    for (int der = 0; der < (int)v.size(); der++) {
+        sumaActual += v[der];
+        while (sumaActual > objetivo) {
+            sumaActual -= v[izq];
+            izq++;
+        }
+        mejor = max(mejor, der - izq + 1); // max() de <algorithm>
+    }
+
+    Casos de uso: subarreglos/substrings con una condicion de suma,
+    cantidad de elementos distintos, etc. Complejidad O(n).
+
+---------------------------------------------------------------------
+3) PERMUTACIONES Y SUBCONJUNTOS (STL directa + manual)
+---------------------------------------------------------------------
+
+3.a) next_permutation / prev_permutation (STL directa, <algorithm>)
+
+    vector<int> v = {1, 2, 3};
+    sort(v.begin(), v.end()); // asegurar el orden inicial (menor perm.)
+    do {
+        for (int x : v) cout << x << " ";
+        cout << "\n";
+    } while (next_permutation(v.begin(), v.end()));
+
+    Casos de uso: generar todas las permutaciones cuando n es chico
+    (n <= 10 aprox.), problemas tipo "probar todos los ordenes posibles".
+
+3.b) Backtracking / subconjuntos con poda (manual)
+
+    void backtrack(int idx, vector<int> &actual, vector<int> &items) {
+        if (idx == (int)items.size()) {
+            // procesar "actual" (un subconjunto)
+            return;
+        }
+        // no incluir items[idx]
+        backtrack(idx + 1, actual, items);
+        // incluir items[idx]
+        actual.push_back(items[idx]);
+        backtrack(idx + 1, actual, items);
+        actual.pop_back();
+    }
+
+    Casos de uso: generar subconjuntos (2^n), problemas de decision con
+    poda (branch and bound), Sudoku-like, N-reinas.
+
+---------------------------------------------------------------------
+4) PROGRAMACION DINAMICA (manual, sin funciones de <algorithm> dedicadas)
+---------------------------------------------------------------------
+DP no tiene "funcion de biblioteca", pero se apoya en max()/min() de
+<algorithm> y en vector para las tablas.
+
+Ejemplo clasico: Knapsack 0/1
+
+    int n = items.size(), capacidad = W;
+    vector<vector<int>> dp(n + 1, vector<int>(capacidad + 1, 0));
+
+    for (int i = 1; i <= n; i++) {
+        for (int w = 0; w <= capacidad; w++) {
+            dp[i][w] = dp[i - 1][w]; // no tomar el item i
+            if (peso[i - 1] <= w) {
+                dp[i][w] = max(dp[i][w], dp[i - 1][w - peso[i - 1]] + valor[i - 1]);
+            }
+        }
+    }
+    int respuesta = dp[n][capacidad];
+
+Ejemplo: Longest Increasing Subsequence (LIS) en O(n log n) usando
+lower_bound (STL directa):
+
+    vector<int> tails; // tails[i] = menor valor final de una LIS de tamaño i+1
+    for (int x : v) {
+        auto it = lower_bound(tails.begin(), tails.end(), x);
+        if (it == tails.end()) tails.push_back(x);
+        else *it = x;
+    }
+    int lisLen = tails.size();
+
+Casos de uso de DP en omegaup:
+    - Subsecuencias (LIS, LCS, edit distance)
+    - Caminos en grillas contando formas o minimizando/maximizando costo
+    - Knapsack y variantes (subset sum, coin change)
+    - DP con bitmask (subconjuntos, TSP para n chico ~15-20)
+    - DP en arboles (subarbol optimo, distancias)
+    - Reconstruccion de la solucion (guardar de donde vino cada estado)
+
+---------------------------------------------------------------------
+5) GRAFOS
+---------------------------------------------------------------------
+Ninguno de estos esta "armado" en <algorithm>, pero usan intensamente
+queue, priority_queue, vector y sort.
+
+5.a) BFS (recorrido por niveles, camino minimo sin pesos)
+
+    #include <queue>
+    vector<vector<int>> adj(n);
+    vector<int> dist(n, -1);
+    queue<int> q;
+    dist[origen] = 0;
+    q.push(origen);
+    while (!q.empty()) {
+        int u = q.front(); q.pop();
+        for (int v : adj[u]) {
+            if (dist[v] == -1) {
+                dist[v] = dist[u] + 1;
+                q.push(v);
+            }
+        }
+    }
+
+    Casos de uso: camino mas corto en grafos sin peso, laberintos,
+    componentes conexas, verificar bipartitud.
+
+5.b) DFS (recursivo o con stack manual)
+
+    vector<vector<int>> adj(n);
+    vector<bool> visitado(n, false);
+
+    void dfs(int u) {
+        visitado[u] = true;
+        for (int v : adj[u]) {
+            if (!visitado[v]) dfs(v);
+        }
+    }
+
+    Casos de uso: componentes conexas, deteccion de ciclos, orden
+    topologico, puntos de articulacion/puentes.
+
+5.c) Dijkstra (caminos minimos con pesos no negativos, usa priority_queue)
+
+    #include <queue>
+    typedef pair<long long,int> pli; // {distancia, nodo}
+
+    vector<vector<pair<int,int>>> adj(n); // adj[u] = {v, peso}
+    vector<long long> dist(n, LLONG_MAX);
+    priority_queue<pli, vector<pli>, greater<pli>> pq; // min-heap
+
+    dist[origen] = 0;
+    pq.push({0, origen});
+    while (!pq.empty()) {
+        auto [d, u] = pq.top(); pq.pop();
+        if (d > dist[u]) continue; // ya se proceso con menor distancia
+        for (auto [v, peso] : adj[u]) {
+            if (dist[u] + peso < dist[v]) {
+                dist[v] = dist[u] + peso;
+                pq.push({dist[v], v});
+            }
+        }
+    }
+
+    Nota: greater<pli>() (de <functional>, usable directo con sort()
+    tambien) convierte el priority_queue (que por defecto es max-heap)
+    en un min-heap.
+
+    Casos de uso: caminos minimos con pesos >= 0 (rutas, redes, costos).
+
+5.d) Bellman-Ford (pesos negativos, detecta ciclos negativos)
+
+    vector<long long> dist(n, LLONG_MAX);
+    dist[origen] = 0;
+    for (int i = 0; i < n - 1; i++) {
+        for (auto &[u, v, peso] : aristas) {
+            if (dist[u] != LLONG_MAX && dist[u] + peso < dist[v]) {
+                dist[v] = dist[u] + peso;
+            }
+        }
+    }
+    // una pasada extra para detectar ciclo negativo
+    bool hayCicloNegativo = false;
+    for (auto &[u, v, peso] : aristas) {
+        if (dist[u] != LLONG_MAX && dist[u] + peso < dist[v]) {
+            hayCicloNegativo = true;
+        }
+    }
+
+    Casos de uso: grafos con pesos negativos, arbitraje, deteccion de
+    ciclos negativos.
+
+5.e) Floyd-Warshall (todos los pares, grafos chicos, n <= ~400-500)
+
+    vector<vector<long long>> dist(n, vector<long long>(n, LLONG_MAX / 2));
+    for (int i = 0; i < n; i++) dist[i][i] = 0;
+    // cargar dist[u][v] = peso de las aristas directas
+
+    for (int k = 0; k < n; k++)
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+                dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j]);
+
+    Casos de uso: distancias entre todos los pares de nodos, grafos
+    densos y chicos, problemas donde se consultan muchas parejas origen-destino.
+
+5.f) Union-Find / DSU (Disjoint Set Union) - manual, base de Kruskal
+
+    vector<int> padre, rango;
+
+    void iniciar(int n) {
+        padre.resize(n);
+        rango.assign(n, 0);
+        iota(padre.begin(), padre.end(), 0); // iota() de <numeric>
+    }
+
+    int encontrar(int x) {
+        if (padre[x] != x) padre[x] = encontrar(padre[x]); // compresion de camino
+        return padre[x];
+    }
+
+    bool unir(int a, int b) {
+        a = encontrar(a); b = encontrar(b);
+        if (a == b) return false; // ya estaban unidos
+        if (rango[a] < rango[b]) swap(a, b); // swap() de <algorithm>
+        padre[b] = a;
+        if (rango[a] == rango[b]) rango[a]++;
+        return true;
+    }
+
+    Casos de uso: componentes conexas dinamicas, detectar ciclos al
+    agregar aristas, Kruskal (MST).
+
+5.g) Kruskal (arbol de expansion minima, usa sort + DSU)
+
+    struct Arista { int u, v, peso; };
+    vector<Arista> aristas;
+
+    sort(aristas.begin(), aristas.end(), [](const Arista &a, const Arista &b) {
+        return a.peso < b.peso; // sort() de <algorithm>
+    });
+
+    iniciar(n);
+    long long costoTotal = 0;
+    for (auto &e : aristas) {
+        if (unir(e.u, e.v)) {
+            costoTotal += e.peso;
+        }
+    }
+
+    Casos de uso: conectar todos los nodos con costo minimo (redes,
+    caminos, cableado).
+
+5.h) Orden topologico (Kahn, usa queue)
+
+    vector<int> gradoEntrada(n, 0);
+    for (int u = 0; u < n; u++)
+        for (int v : adj[u]) gradoEntrada[v]++;
+
+    queue<int> q;
+    for (int i = 0; i < n; i++)
+        if (gradoEntrada[i] == 0) q.push(i);
+
+    vector<int> orden;
+    while (!q.empty()) {
+        int u = q.front(); q.pop();
+        orden.push_back(u);
+        for (int v : adj[u]) {
+            if (--gradoEntrada[v] == 0) q.push(v);
+        }
+    }
+    // si orden.size() < n, hay un ciclo (no existe orden topologico)
+
+    Casos de uso: dependencias (tareas, compilacion), detectar ciclos
+    en grafos dirigidos.
+
+---------------------------------------------------------------------
+6) ESTRUCTURAS DE DATOS PARA CONSULTAS DE RANGO (manual)
+---------------------------------------------------------------------
+No estan en <algorithm>, pero se combinan con vector.
+
+6.a) Fenwick Tree / Binary Indexed Tree (suma de prefijos, update O(log n))
+
+    vector<long long> bit;
+    int N;
+
+    void iniciarBIT(int n) {
+        N = n;
+        bit.assign(n + 1, 0);
+    }
+
+    void actualizar(int i, long long delta) {
+        for (; i <= N; i += i & (-i)) bit[i] += delta;
+    }
+
+    long long consultaPrefijo(int i) {
+        long long s = 0;
+        for (; i > 0; i -= i & (-i)) s += bit[i];
+        return s;
+    }
+
+    long long consultaRango(int l, int r) {
+        return consultaPrefijo(r) - consultaPrefijo(l - 1);
+    }
+
+    Casos de uso: sumas de rango con actualizaciones frecuentes,
+    conteo de inversiones, frecuencias acumuladas.
+
+6.b) Segment Tree (min/max/suma de rango, mas flexible que BIT)
+
+    vector<long long> seg;
+    int N;
+
+    void construir(vector<long long> &a, int nodo, int ini, int fin) {
+        if (ini == fin) { seg[nodo] = a[ini]; return; }
+        int medio = (ini + fin) / 2;
+        construir(a, 2*nodo, ini, medio);
+        construir(a, 2*nodo+1, medio+1, fin);
+        seg[nodo] = min(seg[2*nodo], seg[2*nodo+1]); // min() de <algorithm>
+    }
+
+    long long consultar(int nodo, int ini, int fin, int l, int r) {
+        if (r < ini || fin < l) return LLONG_MAX;
+        if (l <= ini && fin <= r) return seg[nodo];
+        int medio = (ini + fin) / 2;
+        return min(consultar(2*nodo, ini, medio, l, r),
+                    consultar(2*nodo+1, medio+1, fin, l, r));
+    }
+
+    Casos de uso: min/max/suma de rango con actualizaciones puntuales
+    o de rango (con lazy propagation para updates de rango).
+
+6.c) Sparse Table (RMQ estatico, sin actualizaciones, consulta O(1))
+
+    vector<vector<int>> sparse;
+
+    void construirSparse(vector<int> &a) {
+        int n = a.size();
+        int LOG = log2(n) + 1;
+        sparse.assign(LOG, vector<int>(n));
+        sparse[0] = a;
+        for (int k = 1; k < LOG; k++)
+            for (int i = 0; i + (1 << k) <= n; i++)
+                sparse[k][i] = min(sparse[k-1][i], sparse[k-1][i + (1 << (k-1))]);
+    }
+
+    int consultarMin(int l, int r) { // rango [l, r] inclusive
+        int k = log2(r - l + 1);
+        return min(sparse[k][l], sparse[k][r - (1 << k) + 1]);
+    }
+
+    Casos de uso: consultas de minimo/maximo de rango repetidas sobre
+    un arreglo que NO cambia.
+
+---------------------------------------------------------------------
+7) MATEMATICA Y COMBINATORIA
+---------------------------------------------------------------------
+
+7.a) gcd() y lcm() (STL directa desde C++17, en <numeric>)
+
+    #include <numeric>
+    int a = 12, b = 18;
+    int mcd = gcd(a, b); // 6
+    int mcm = lcm(a, b); // 36
+
+    Casos de uso: simplificar fracciones, problemas de ciclos/periodos.
+
+7.b) accumulate, iota, partial_sum (STL directa, <numeric>)
+
+    vector<int> v = {1, 2, 3, 4};
+
+    int suma = accumulate(v.begin(), v.end(), 0); // 10
+
+    vector<int> idx(5);
+    iota(idx.begin(), idx.end(), 0); // {0,1,2,3,4}
+
+    vector<int> prefijos(v.size());
+    partial_sum(v.begin(), v.end(), prefijos.begin()); // {1,3,6,10}
+
+    Casos de uso: sumas de prefijo rapidas, inicializar arreglos de
+    indices (util para DSU o para ordenar indices en vez de valores).
+
+7.c) Exponenciacion rapida (manual, base de potencias modulares)
+
+    const long long MOD = 1e9 + 7;
+
+    long long potenciaRapida(long long base, long long exp, long long mod) {
+        long long resultado = 1;
+        base %= mod;
+        while (exp > 0) {
+            if (exp & 1) resultado = (resultado * base) % mod;
+            base = (base * base) % mod;
+            exp >>= 1;
+        }
+        return resultado;
+    }
+
+    Casos de uso: potencias modulo un primo grande, calculo de
+    inversos modulares (Fermat: a^(mod-2) mod mod).
+
+7.d) Criba de Eratostenes (manual, para primos hasta n)
+
+    vector<bool> criba(int n) {
+        vector<bool> esPrimo(n + 1, true);
+        esPrimo[0] = esPrimo[1] = false;
+        for (int i = 2; (long long)i * i <= n; i++) {
+            if (esPrimo[i]) {
+                for (int j = i * i; j <= n; j += i) {
+                    esPrimo[j] = false;
+                }
+            }
+        }
+        return esPrimo;
+    }
+
+    Casos de uso: encontrar primos hasta 10^6-10^7, factorizacion
+    rapida con "smallest prime factor" (variante de la criba).
+
+7.e) Combinatoria modular (factoriales + inverso modular)
+
+    const int MAXN = 1e6 + 5;
+    long long fact[MAXN], inv_fact[MAXN];
+
+    void precalcularFactoriales() {
+        fact[0] = 1;
+        for (int i = 1; i < MAXN; i++) fact[i] = fact[i-1] * i % MOD;
+        inv_fact[MAXN-1] = potenciaRapida(fact[MAXN-1], MOD-2, MOD);
+        for (int i = MAXN-2; i >= 0; i--) inv_fact[i] = inv_fact[i+1] * (i+1) % MOD;
+    }
+
+    long long combinacion(int n, int r) {
+        if (r < 0 || r > n) return 0;
+        return fact[n] * inv_fact[r] % MOD * inv_fact[n-r] % MOD;
+    }
+
+    Casos de uso: contar combinaciones C(n,r) con n muy grande, modulo
+    un primo (muy comun en problemas de conteo).
+
+---------------------------------------------------------------------
+8) GREEDY (manual, apoyado en sort())
+---------------------------------------------------------------------
+
+Ejemplo clasico: problema de seleccion de actividades (intervalos que
+no se solapan, maximizar cantidad)
+
+    struct Intervalo { int inicio, fin; };
+    vector<Intervalo> intervalos;
+
+    sort(intervalos.begin(), intervalos.end(), [](const Intervalo &a, const Intervalo &b) {
+        return a.fin < b.fin; // ordenar por fin, clave del greedy
+    });
+
+    int cuenta = 0, finUltimo = INT_MIN;
+    for (auto &iv : intervalos) {
+        if (iv.inicio >= finUltimo) {
+            cuenta++;
+            finUltimo = iv.fin;
+        }
+    }
+
+    Casos de uso: scheduling de actividades/intervalos, coin change con
+    sistemas de monedas "canonicos", problemas donde la eleccion local
+    optima no afecta decisiones futuras (hay que demostrarlo antes de
+    confiar en greedy).
+
+---------------------------------------------------------------------
+9) RESUMEN: QUE VIENE LISTO EN <algorithm>/<numeric> Y QUE HAY QUE ARMAR
+---------------------------------------------------------------------
+
+Listo para usar directamente (STL):
+    sort, stable_sort, binary_search, lower_bound, upper_bound,
+    next_permutation, prev_permutation, max, min, max_element,
+    min_element, accumulate, iota, partial_sum, gcd, lcm, swap,
+    reverse, unique, count, find
+
+Hay que programarlos a mano (usando vector/queue/priority_queue como
+soporte, pero la logica del algoritmo no viene en la biblioteca):
+    BFS, DFS, Dijkstra, Bellman-Ford, Floyd-Warshall, Union-Find (DSU),
+    Kruskal (usa sort de soporte), Prim, orden topologico, segment tree,
+    Fenwick tree, sparse table, DP (todas sus variantes), backtracking,
+    criba de Eratostenes, exponenciacion rapida, combinatoria modular.
+
+---------------------------------------------------------------------
+10) TABLA RAPIDA: ALGORITMO -> CUANDO SOSPECHAR QUE APLICA
+---------------------------------------------------------------------
+
+Pista en el enunciado                          | Algoritmo probable
+--------------------------------------------------------------------
+"minimizar el maximo" / "maximizar el minimo"   | Busqueda binaria en respuesta
+Arreglo ordenado, buscar/contar un valor        | binary_search/lower_bound/upper_bound
+Subarreglo contiguo con condicion de suma       | Two pointers / sliding window
+n <= 10-12, "todas las formas/ordenes"          | next_permutation o backtracking
+n <= 20-25, subconjuntos                        | Backtracking o DP con bitmask
+Subsecuencias, caminos en grilla, "de cuantas   |
+formas", optimizar con solapamiento de subproblemas | Programacion dinamica
+Camino mas corto sin pesos                      | BFS
+Camino mas corto con pesos >= 0                 | Dijkstra
+Camino mas corto con pesos negativos            | Bellman-Ford
+Todos los pares de distancias, n chico           | Floyd-Warshall
+Conectar todo al menor costo (red, cableado)     | Kruskal / Prim (MST)
+Componentes conexas dinamicas, uniones          | Union-Find (DSU)
+Dependencias entre tareas                        | Orden topologico
+Consultas de suma/min/max en rango, updates      | Segment tree / Fenwick tree
+Consultas de min/max en rango SIN updates        | Sparse table
+Numeros primos hasta n                           | Criba de Eratostenes
+Potencias o combinaciones modulo un primo grande | Exp. rapida + comb. modular
+Eleccion local que no afecta el futuro           | Greedy (demostrar antes de usar)
+=====================================================================
