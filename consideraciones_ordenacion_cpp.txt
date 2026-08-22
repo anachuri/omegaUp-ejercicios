@@ -1,0 +1,249 @@
+=====================================================
+  CONSIDERACIONES Y ORDENACIONES PERSONALIZADAS EN C++
+=====================================================
+
+-----------------------------------------------------
+1) EL COMPARADOR: REGLA DE ORO
+-----------------------------------------------------
+Toda funcion de ordenacion de la STL (sort, stable_sort,
+partial_sort, nth_element, set/map, priority_queue, etc.) necesita
+un criterio de orden. Por defecto usan operator< , pero se puede
+pasar un comparador propio.
+
+Un comparador debe definir un "strict weak ordering" (orden
+estricto debil). En la practica, esto significa:
+
+    comp(a, a) siempre debe ser FALSE   (irreflexivo)
+    si comp(a, b) es true, comp(b, a) debe ser false (asimetrico)
+    debe ser transitivo: si a<b y b<c, entonces a<c
+
+Regla practica: usar SIEMPRE < o > estrictos, nunca <= o >=.
+
+    // INCORRECTO -> comportamiento indefinido (UB), puede crashear
+    sort(v.begin(), v.end(), [](int a, int b) { return a <= b; });
+
+    // CORRECTO
+    sort(v.begin(), v.end(), [](int a, int b) { return a < b; });
+
+Por que falla <=: si a == b, comp(a,b) da true Y comp(b,a) tambien
+da true, violando la asimetria. El algoritmo asume que si comp(a,b)
+es true, "a va estrictamente antes que b", y con <= dos elementos
+iguales "se piden" estar antes uno del otro simultaneamente, lo
+que rompe la logica interna del algoritmo.
+
+-----------------------------------------------------
+2) FORMAS DE DEFINIR UN COMPARADOR
+-----------------------------------------------------
+
+a) Lambda (la mas usada hoy en dia):
+    sort(v.begin(), v.end(), [](int a, int b) {
+        return a > b; // descendente
+    });
+
+b) Funcion comparadora aparte:
+    bool comp(int a, int b) {
+        return a > b;
+    }
+    sort(v.begin(), v.end(), comp);
+
+c) Functor (struct con operator()):
+    struct Comparador {
+        bool operator()(int a, int b) const {
+            return a > b;
+        }
+    };
+    sort(v.begin(), v.end(), Comparador());
+
+d) Funciones ya incluidas en <functional>:
+    #include <functional>
+    sort(v.begin(), v.end(), greater<int>());  // descendente
+    sort(v.begin(), v.end(), less<int>());     // ascendente (default)
+
+e) Sobrecargar operator< dentro de una clase/struct:
+    struct Punto {
+        int x, y;
+        bool operator<(const Punto &o) const {
+            return x < o.x; // ordena solo por x
+        }
+    };
+    vector<Punto> pts;
+    sort(pts.begin(), pts.end()); // usa el operator< definido
+
+-----------------------------------------------------
+3) ORDENAR STRUCTS / CLASES POR UN CAMPO
+-----------------------------------------------------
+
+    struct Persona {
+        string nombre;
+        int edad;
+    };
+
+    vector<Persona> personas = {
+        {"Ana", 30}, {"Luis", 25}, {"Eva", 40}
+    };
+
+    // Por edad ascendente
+    sort(personas.begin(), personas.end(), [](const Persona &a, const Persona &b) {
+        return a.edad < b.edad;
+    });
+
+    // Por nombre alfabeticamente
+    sort(personas.begin(), personas.end(), [](const Persona &a, const Persona &b) {
+        return a.nombre < b.nombre;
+    });
+
+-----------------------------------------------------
+4) ORDENAR POR MULTIPLES CRITERIOS (CRITERIO PRIMARIO Y SECUNDARIO)
+-----------------------------------------------------
+
+Opcion A: comparador con desempate manual (recomendada, un solo sort):
+
+    struct Persona { string nombre; int edad; };
+
+    sort(personas.begin(), personas.end(), [](const Persona &a, const Persona &b) {
+        if (a.edad != b.edad) return a.edad < b.edad;   // criterio primario
+        return a.nombre < b.nombre;                     // desempate
+    });
+
+Opcion B: usando tuple (comparacion lexicografica automatica):
+
+    #include <tuple>
+    sort(personas.begin(), personas.end(), [](const Persona &a, const Persona &b) {
+        return tie(a.edad, a.nombre) < tie(b.edad, b.nombre);
+    });
+
+Opcion C: multiples stable_sort en pasos (del criterio menos
+importante al mas importante):
+
+    stable_sort(personas.begin(), personas.end(), [](auto &a, auto &b) {
+        return a.nombre < b.nombre; // criterio secundario primero
+    });
+    stable_sort(personas.begin(), personas.end(), [](auto &a, auto &b) {
+        return a.edad < b.edad; // criterio primario al final
+    });
+
+    (stable_sort es necesario aca, sort() no garantiza mantener
+    el orden ya logrado por el paso anterior)
+
+-----------------------------------------------------
+5) ORDENAR vector<pair<...>> Y vector<tuple<...>>
+-----------------------------------------------------
+
+Los pares y tuplas ya tienen operator< definido: compara primero
+el primer elemento, y si son iguales, el segundo (y asi
+sucesivamente). Por eso ordenan "gratis" con sort():
+
+    vector<pair<int,string>> v = {{3,"c"}, {1,"a"}, {2,"b"}};
+    sort(v.begin(), v.end());
+    // ordena por el int primero, y por el string si hay empate
+
+Truco comun en competitive programming: usar pair para ordenar
+por dos claves sin escribir comparador:
+
+    vector<pair<int,int>> notas; // {nota, id}
+    sort(notas.begin(), notas.end()); // ordena por nota, y por id si empata
+
+-----------------------------------------------------
+6) ORDEN DESCENDENTE: FORMAS DISTINTAS
+-----------------------------------------------------
+
+    sort(v.begin(), v.end(), greater<int>());
+    sort(v.begin(), v.end(), [](int a, int b){ return a > b; });
+
+    // Alternativa: ordenar ascendente y despues invertir
+    sort(v.begin(), v.end());
+    reverse(v.begin(), v.end());
+
+    // Con rbegin/rend (vista invertida, sin modificar el original)
+    vector<int> copia(v.rbegin(), v.rend());
+
+-----------------------------------------------------
+7) COMPARADORES CON CAPTURA (LAMBDAS QUE USAN VARIABLES EXTERNAS)
+-----------------------------------------------------
+
+Util para ordenar indices segun los valores de otro arreglo:
+
+    vector<int> valores = {40, 10, 30, 20};
+    vector<int> indices = {0, 1, 2, 3};
+
+    sort(indices.begin(), indices.end(), [&valores](int a, int b) {
+        return valores[a] < valores[b];
+    });
+    // indices queda ordenado segun los valores correspondientes: {1, 3, 2, 0}
+
+-----------------------------------------------------
+8) ERRORES COMUNES AL ORDENAR
+-----------------------------------------------------
+
+a) Usar <= o >= en el comparador -> UB, puede crashear en debug
+   (assert de "invalid comparator") o dar resultados incorrectos
+   en release.
+
+b) Olvidar "const &" en los parametros del comparador con structs
+   grandes -> copias innecesarias, perdida de performance.
+       // mejor:
+       [](const Persona &a, const Persona &b) { ... }
+
+c) Usar sort() cuando se necesita estabilidad -> resultados
+   "correctos" en valor pero con el orden relativo alterado en
+   casos de empate.
+
+d) Comparador inconsistente (por ejemplo que dependa de un estado
+   mutable o de aleatoriedad) -> comportamiento indefinido.
+
+e) Confundir nth_element/partial_sort con sort completo: despues
+   de nth_element, el resto del arreglo NO esta ordenado, solo
+   particionado alrededor del elemento pedido.
+
+f) Comparar floats con == dentro del comparador sin tolerancia,
+   cuando en realidad se busca orden estricto: en general no es
+   necesario, pero cuidado con NaN, que rompe cualquier orden
+   estricto debil (comp(NaN, x) siempre false, puede generar UB).
+
+-----------------------------------------------------
+9) COMPLEJIDAD SEGUN EL COSTO DEL COMPARADOR
+-----------------------------------------------------
+Todas las complejidades habituales (O(n log n) para sort, etc.)
+cuentan CANTIDAD DE COMPARACIONES, no tiempo real. Si el
+comparador es costoso (por ejemplo compara strings largos o hace
+calculos pesados), el tiempo real crece proporcionalmente:
+
+    Tiempo real ~ O(n log n) * costo_de_una_comparacion
+
+Por eso, si se ordena muchas veces por la misma clave derivada
+(ej: un hash o un valor calculado), conviene precalcular esa clave
+una sola vez en vez de recalcularla en cada comparacion:
+
+    // Ineficiente: recalcula la clave en cada comparacion
+    sort(v.begin(), v.end(), [](const string &a, const string &b) {
+        return calcularClaveCostosa(a) < calcularClaveCostosa(b);
+    });
+
+    // Mejor: precalcular clave junto al valor original (decorate-sort-undecorate)
+    vector<pair<int,string>> claveYValor;
+    for (auto &s : v) claveYValor.push_back({calcularClaveCostosa(s), s});
+    sort(claveYValor.begin(), claveYValor.end());
+
+-----------------------------------------------------
+10) CONSIDERACIONES PARA COMPETITIVE PROGRAMMING (omegaup y similares)
+-----------------------------------------------------
+
+- Preferir sort()/stable_sort() de la STL antes que reimplementar
+  a mano, salvo que el enunciado lo pida explicitamente.
+- Usar pair<int,int> o tuple para ordenar por multiples claves sin
+  escribir comparadores largos.
+- Usar nth_element() cuando el problema pide "el k-esimo elemento"
+  sin necesidad del orden completo, para ganar tiempo (O(n) vs
+  O(n log n)).
+- Revisar bien el comparador antes de enviar: un <= en vez de <
+  puede provocar Runtime Error (por el assert interno de sort en
+  modo debug) o Wrong Answer silencioso en modo release.
+- Si se ordenan estructuras grandes muchas veces, considerar
+  ordenar un vector de indices en vez de la estructura completa,
+  para evitar mover datos pesados en cada swap:
+      vector<int> idx(n);
+      iota(idx.begin(), idx.end(), 0); // idx = {0,1,2,...,n-1}
+      sort(idx.begin(), idx.end(), [&](int a, int b) {
+          return datos[a] < datos[b];
+      });
+=====================================================

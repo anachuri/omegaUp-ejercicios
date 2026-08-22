@@ -1,0 +1,126 @@
+=====================================================
+  FUNCIONES BASICAS - std::vector y std::string (C++)
+=====================================================
+
+Para usarlos, incluir:
+    #include <vector>
+    #include <string>
+    using namespace std;  (opcional)
+
+-----------------------------------------------------
+1) std::vector<T>
+-----------------------------------------------------
+
+Declaracion e inicializacion:
+    vector<int> v;                 // vector vacio
+    vector<int> v2(5);             // 5 elementos en 0
+    vector<int> v3(5, 10);         // 5 elementos, todos con valor 10
+    vector<int> v4 = {1, 2, 3, 4}; // inicializado con lista
+
+Funciones / metodos principales:
+    v.push_back(x);        // agrega x al final
+    v.pop_back();          // elimina el ultimo elemento
+    v.size();              // cantidad de elementos (size_t)
+    v.empty();             // true si esta vacio
+    v.clear();             // elimina todos los elementos
+    v.at(i);               // acceso con chequeo de rango (lanza excepcion)
+    v[i];                  // acceso directo (sin chequeo)
+    v.front();             // referencia al primer elemento
+    v.back();              // referencia al ultimo elemento
+    v.insert(v.begin()+i, x); // inserta x en la posicion i
+    v.erase(v.begin()+i);     // elimina el elemento en la posicion i
+    v.resize(n);           // cambia el tamaño a n
+    v.reserve(n);          // reserva capacidad para n elementos (evita realocaciones)
+    v.capacity();          // capacidad actual reservada
+    v.begin() / v.end();   // iteradores (para recorrer o usar con algoritmos)
+
+Recorrer un vector:
+    for (int i = 0; i < (int)v.size(); i++) {
+        cout << v[i] << " ";
+    }
+
+    for (int x : v) {          // range-based for
+        cout << x << " ";
+    }
+
+    for (auto it = v.begin(); it != v.end(); ++it) {
+        cout << *it << " ";
+    }
+
+Ordenar y buscar (con <algorithm>):
+    #include <algorithm>
+    sort(v.begin(), v.end());                  // ascendente
+    sort(v.begin(), v.end(), greater<int>());  // descendente
+    reverse(v.begin(), v.end());               // invierte el orden
+    auto it = find(v.begin(), v.end(), valor);  // busca un valor
+    int mx = *max_element(v.begin(), v.end());  // maximo
+    int mn = *min_element(v.begin(), v.end());  // minimo
+
+Vector de vectores (matriz dinamica):
+    vector<vector<int>> matriz(filas, vector<int>(columnas, 0));
+
+-----------------------------------------------------
+2) std::string
+-----------------------------------------------------
+
+Declaracion e inicializacion:
+    string s;                  // string vacio
+    string s2 = "hola";        // inicializado
+    string s3(5, 'a');         // "aaaaa"
+
+Funciones / metodos principales:
+    s.size() / s.length();     // cantidad de caracteres
+    s.empty();                 // true si esta vacio
+    s.clear();                 // vacia el string
+    s.at(i);                   // acceso con chequeo de rango
+    s[i];                      // acceso directo
+    s.front();                 // primer caracter
+    s.back();                  // ultimo caracter
+    s.append("texto");         // agrega al final (o usar s += "texto")
+    s.push_back('x');          // agrega un caracter al final
+    s.pop_back();              // elimina el ultimo caracter
+    s.insert(pos, "texto");    // inserta texto en la posicion pos
+    s.erase(pos, cant);        // elimina 'cant' caracteres desde 'pos'
+    s.substr(pos, cant);       // subcadena desde 'pos', 'cant' caracteres
+    s.find("sub");             // devuelve posicion o string::npos si no existe
+    s.replace(pos, cant, "nuevo"); // reemplaza una porcion
+    s.compare(s2);             // compara dos strings (0 si son iguales)
+    s.c_str();                 // convierte a const char* (estilo C)
+
+Concatenacion:
+    string a = "hola";
+    string b = "mundo";
+    string c = a + " " + b;    // "hola mundo"
+
+Conversion entre string y numeros:
+    #include <string>
+    int n = stoi("123");       // string -> int
+    double d = stod("3.14");   // string -> double
+    string s = to_string(456); // numero -> string
+
+Recorrer un string:
+    for (int i = 0; i < (int)s.size(); i++) {
+        cout << s[i];
+    }
+
+    for (char c : s) {         // range-based for
+        cout << c;
+    }
+
+Comparaciones:
+    if (s == "hola") { ... }   // se puede comparar directamente con ==
+    if (s != s2) { ... }
+
+Leer strings con espacios:
+    string linea;
+    getline(cin, linea);       // lee toda la linea, incluyendo espacios
+
+-----------------------------------------------------
+Notas rapidas:
+-----------------------------------------------------
+- vector y string se pasan por referencia con "&" para evitar copias:
+      void funcion(vector<int> &v) { ... }
+      void funcion(string &s) { ... }
+- Usar "const &" si no se van a modificar:
+      void funcion(const vector<int> &v) { ... }
+=====================================================

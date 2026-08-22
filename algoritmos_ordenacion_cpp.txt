@@ -1,0 +1,300 @@
+=====================================================
+  ALGORITMOS DE ORDENACION EN C++ - GUIA DETALLADA
+=====================================================
+
+-----------------------------------------------------
+0) TABLA COMPARATIVA RAPIDA
+-----------------------------------------------------
+
+Algoritmo        | Mejor caso | Prom.     | Peor caso  | Espacio | Estable | In-place
+------------------------------------------------------------------------------------
+Bubble Sort       | O(n)       | O(n^2)    | O(n^2)     | O(1)    | Si      | Si
+Selection Sort     | O(n^2)     | O(n^2)    | O(n^2)     | O(1)    | No      | Si
+Insertion Sort     | O(n)       | O(n^2)    | O(n^2)     | O(1)    | Si      | Si
+Merge Sort         | O(n log n) | O(n log n)| O(n log n) | O(n)    | Si      | No
+Quick Sort         | O(n log n) | O(n log n)| O(n^2)     | O(log n)| No      | Si
+Heap Sort          | O(n log n) | O(n log n)| O(n log n) | O(1)    | No      | Si
+std::sort (C++)    | O(n log n) | O(n log n)| O(n log n) | O(log n)| No      | Si
+std::stable_sort   | O(n log n) | O(n log n)| O(n log n log n)| O(n)| Si  | No
+
+"Estable" = mantiene el orden relativo de elementos iguales.
+"In-place" = no necesita memoria auxiliar proporcional a n.
+
+-----------------------------------------------------
+1) BUBBLE SORT
+-----------------------------------------------------
+Idea: recorre repetidamente el arreglo intercambiando elementos
+adyacentes si estan en el orden incorrecto.
+
+    void bubbleSort(int arr[], int n) {
+        for (int i = 0; i < n - 1; i++) {
+            bool swapped = false;
+            for (int j = 0; j < n - i - 1; j++) {
+                if (arr[j] > arr[j + 1]) {
+                    swap(arr[j], arr[j + 1]);
+                    swapped = true;
+                }
+            }
+            if (!swapped) break; // ya esta ordenado, corta antes
+        }
+    }
+
+Consideraciones:
+- Muy ineficiente para n grande (O(n^2)).
+- Util solo con fines didacticos o arreglos muy pequeños/casi ordenados.
+- El flag "swapped" mejora el mejor caso a O(n).
+
+-----------------------------------------------------
+2) SELECTION SORT
+-----------------------------------------------------
+Idea: en cada iteracion busca el minimo del resto del arreglo
+y lo coloca en su posicion correcta.
+
+    void selectionSort(int arr[], int n) {
+        for (int i = 0; i < n - 1; i++) {
+            int minIdx = i;
+            for (int j = i + 1; j < n; j++) {
+                if (arr[j] < arr[minIdx]) minIdx = j;
+            }
+            swap(arr[i], arr[minIdx]);
+        }
+    }
+
+Consideraciones:
+- Siempre O(n^2), incluso si ya esta ordenado.
+- Hace pocas escrituras (n intercambios), util si escribir es costoso.
+- No es estable (los intercambios pueden alterar el orden relativo).
+
+-----------------------------------------------------
+3) INSERTION SORT
+-----------------------------------------------------
+Idea: construye el arreglo ordenado de a un elemento, insertando
+cada nuevo elemento en su posicion correcta dentro de la parte
+ya ordenada.
+
+    void insertionSort(int arr[], int n) {
+        for (int i = 1; i < n; i++) {
+            int key = arr[i];
+            int j = i - 1;
+            while (j >= 0 && arr[j] > key) {
+                arr[j + 1] = arr[j];
+                j--;
+            }
+            arr[j + 1] = key;
+        }
+    }
+
+Consideraciones:
+- Muy eficiente para arreglos pequeños o casi ordenados (O(n) mejor caso).
+- Es estable y in-place.
+- Muchas implementaciones de sort hibridas (como std::sort) lo usan
+  para sub-arreglos pequeños dentro de otros algoritmos.
+
+-----------------------------------------------------
+4) MERGE SORT
+-----------------------------------------------------
+Idea: divide y venceras. Divide el arreglo en mitades, ordena
+cada mitad recursivamente y luego las mezcla (merge).
+
+    void merge(int arr[], int l, int m, int r) {
+        int n1 = m - l + 1, n2 = r - m;
+        int *L = new int[n1];
+        int *R = new int[n2];
+
+        for (int i = 0; i < n1; i++) L[i] = arr[l + i];
+        for (int j = 0; j < n2; j++) R[j] = arr[m + 1 + j];
+
+        int i = 0, j = 0, k = l;
+        while (i < n1 && j < n2) {
+            if (L[i] <= R[j]) arr[k++] = L[i++];
+            else arr[k++] = R[j++];
+        }
+        while (i < n1) arr[k++] = L[i++];
+        while (j < n2) arr[k++] = R[j++];
+
+        delete[] L;
+        delete[] R;
+    }
+
+    void mergeSort(int arr[], int l, int r) {
+        if (l >= r) return;
+        int m = l + (r - l) / 2;
+        mergeSort(arr, l, m);
+        mergeSort(arr, m + 1, r);
+        merge(arr, l, m, r);
+    }
+
+Consideraciones:
+- Garantiza O(n log n) siempre, incluso en el peor caso.
+- Es estable, muy usado cuando la estabilidad importa.
+- Requiere O(n) de memoria auxiliar (no es in-place).
+- Ideal para ordenar listas enlazadas o datos externos (external sorting).
+
+-----------------------------------------------------
+5) QUICK SORT
+-----------------------------------------------------
+Idea: elige un pivote, particiona el arreglo en menores y
+mayores al pivote, y ordena recursivamente cada particion.
+
+    int partition(int arr[], int low, int high) {
+        int pivot = arr[high];
+        int i = low - 1;
+        for (int j = low; j < high; j++) {
+            if (arr[j] < pivot) {
+                i++;
+                swap(arr[i], arr[j]);
+            }
+        }
+        swap(arr[i + 1], arr[high]);
+        return i + 1;
+    }
+
+    void quickSort(int arr[], int low, int high) {
+        if (low < high) {
+            int pi = partition(arr, low, high);
+            quickSort(arr, low, pi - 1);
+            quickSort(arr, pi + 1, high);
+        }
+    }
+
+Consideraciones:
+- Muy rapido en la practica (buena localidad de cache).
+- Peor caso O(n^2) si el pivote se elige mal (ej: arreglo ya ordenado
+  y siempre se toma el primer/ultimo elemento como pivote).
+- Se puede mitigar con:
+    * pivote aleatorio
+    * mediana de tres (primero, medio, ultimo)
+- No es estable.
+- Es la base de std::sort (junto con heap sort e insertion sort).
+
+-----------------------------------------------------
+6) HEAP SORT
+-----------------------------------------------------
+Idea: construye un max-heap con los datos y extrae repetidamente
+el maximo, colocandolo al final.
+
+    void heapify(int arr[], int n, int i) {
+        int largest = i;
+        int l = 2 * i + 1, r = 2 * i + 2;
+
+        if (l < n && arr[l] > arr[largest]) largest = l;
+        if (r < n && arr[r] > arr[largest]) largest = r;
+
+        if (largest != i) {
+            swap(arr[i], arr[largest]);
+            heapify(arr, n, largest);
+        }
+    }
+
+    void heapSort(int arr[], int n) {
+        for (int i = n / 2 - 1; i >= 0; i--)
+            heapify(arr, n, i);
+
+        for (int i = n - 1; i > 0; i--) {
+            swap(arr[0], arr[i]);
+            heapify(arr, i, 0);
+        }
+    }
+
+Consideraciones:
+- Garantiza O(n log n) en todos los casos, sin peor caso degenerado.
+- In-place, no requiere memoria extra.
+- No es estable.
+- Peor localidad de cache que quicksort (suele ser mas lento en la practica).
+
+-----------------------------------------------------
+7) FUNCIONES DE ORDENACION DE LA STL (RECOMENDADAS EN LA PRACTICA)
+-----------------------------------------------------
+
+#include <algorithm>
+
+sort(v.begin(), v.end());
+    - Algoritmo hibrido (introsort: quicksort + heapsort + insertion sort).
+    - No estable. O(n log n) garantizado en peor caso (gracias al fallback a heapsort).
+
+stable_sort(v.begin(), v.end());
+    - Garantiza estabilidad (usa merge sort internamente).
+    - Un poco mas lento y puede usar memoria extra O(n).
+
+partial_sort(v.begin(), v.begin() + k, v.end());
+    - Ordena solo los primeros k elementos, el resto queda en cualquier orden.
+    - Util si solo necesitas el top-k.
+
+nth_element(v.begin(), v.begin() + k, v.end());
+    - Coloca el elemento que estaria en la posicion k si estuviera
+      ordenado, sin ordenar todo el arreglo. O(n) promedio.
+    - Util para encontrar medianas o el k-esimo menor/mayor.
+
+Orden descendente:
+    sort(v.begin(), v.end(), greater<int>());
+
+Comparador personalizado (lambda):
+    sort(v.begin(), v.end(), [](int a, int b) {
+        return a > b; // descendente
+    });
+
+Ordenar un vector de pares/structs por un campo:
+    struct Persona { string nombre; int edad; };
+
+    vector<Persona> personas;
+    sort(personas.begin(), personas.end(), [](const Persona &a, const Persona &b) {
+        return a.edad < b.edad; // ascendente por edad
+    });
+
+Ordenar y luego eliminar duplicados:
+    sort(v.begin(), v.end());
+    v.erase(unique(v.begin(), v.end()), v.end());
+
+-----------------------------------------------------
+8) CONSIDERACIONES GENERALES A LA HORA DE ELEGIR
+-----------------------------------------------------
+
+1. Tamaño de los datos:
+   - n pequeño (< ~20-50): insertion sort puede ser mas rapido en la
+     practica por su bajo overhead constante.
+   - n grande: usar sort() de la STL, ya optimizado.
+
+2. Estabilidad:
+   - Si el orden relativo de elementos "iguales" importa (ej: ordenar
+     por apellido y despues por nombre sin perder el orden previo),
+     usar stable_sort().
+
+3. Memoria disponible:
+   - Si la memoria es limitada, preferir algoritmos in-place
+     (quick sort, heap sort, insertion sort) sobre merge sort.
+
+4. Peor caso garantizado:
+   - Si se necesita evitar O(n^2) en el peor caso (ej: datos
+     adversarios o competitive programming con inputs maliciosos),
+     usar merge sort, heap sort, o confiar en std::sort (que usa
+     introsort y evita el peor caso de quicksort puro).
+
+5. Datos casi ordenados:
+   - Insertion sort es muy eficiente en este escenario (casi O(n)).
+
+6. Ordenar parcialmente (top-k, mediana):
+   - Usar partial_sort o nth_element en vez de ordenar todo el
+     arreglo; son mas eficientes cuando no se necesita el orden
+     completo.
+
+7. Complejidad de comparacion:
+   - Si comparar elementos es costoso (ej: strings largos, structs
+     grandes), preferir algoritmos con menos comparaciones
+     (merge sort) sobre los que hacen muchos swaps/comparaciones
+     redundantes.
+
+8. Ordenar por referencia vs por valor:
+   - Al pasar el vector a una funcion propia, usar referencia
+     (vector<int> &v) para evitar copiar todo el arreglo.
+
+9. En competitive programming (dado tu contexto con omegaup):
+   - Preferir siempre sort() / stable_sort() de la STL antes que
+     reimplementar un algoritmo, salvo que el ejercicio pida
+     explicitamente implementarlo a mano.
+   - Usar nth_element() cuando el problema pide el k-esimo elemento
+     sin necesidad de orden completo, para ganar tiempo.
+   - Cuidado con comparadores que no definen un orden estricto
+     debil (strict weak ordering): pueden causar UB (undefined
+     behavior) o crashes en sort(). Ejemplo de comparador invalido:
+         return a <= b;   // INCORRECTO, debe ser estrictamente <
+=====================================================
